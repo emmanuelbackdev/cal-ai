@@ -44,7 +44,7 @@ export default function WelcomeScreen() {
 
       <Pressable
         accessibilityRole="button"
-        onPress={() => router.push('/home')}
+        onPress={() => router.push('/onboarding/sex')}
         className="mt-[18px] h-[47px] flex-row items-center justify-center rounded-full bg-black active:opacity-80">
         <Text className="text-base font-medium text-white">Get Started</Text>
         <View className="absolute right-6">
