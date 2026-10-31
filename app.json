@@ -8,7 +8,8 @@
     "scheme": "calai",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.anonymous.cal-ai"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,6 +21,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "bundler": "metro",
       "output": "server",
       "favicon": "./assets/images/favicon.png"
     },
