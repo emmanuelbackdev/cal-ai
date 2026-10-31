@@ -1,5 +1,6 @@
-import AppTabs from '@/components/app-tabs';
+import { Stack } from 'expo-router';
 
-export default function TabLayout() {
-  return <AppTabs />;
+// Signed-in area. Becomes the Home / Progress / Profile tab bar once those screens exist.
+export default function TabsLayout() {
+  return <Stack screenOptions={{ headerShown: false }} />;
 }

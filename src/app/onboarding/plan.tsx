@@ -41,8 +41,7 @@ export default function PlanStep() {
       title={"Here’s what your\nplan includes"}
       subtitle={subtitle}
       buttonLabel="Continue"
-      // TODO: go to "Save your plan" (sign in) once auth exists.
-      onNext={() => router.replace('/home')}>
+      onNext={() => router.push('/sign-in')}>
       <View className="mt-6 gap-2.5">
         {FEATURES.map((f) => (
           <View
