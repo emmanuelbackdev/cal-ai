@@ -16,6 +16,7 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    "trigger.config.ts"
+    "trigger.config.ts",
+    "nativewind-env.d.ts"
   ]
 }
