@@ -1,5 +1,6 @@
+import { useAuth } from '@clerk/expo';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,6 +16,9 @@ function ArrowRight() {
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
+  const { isSignedIn } = useAuth();
+
+  if (isSignedIn) return <Redirect href="/home" />
 
   return (
     <View
@@ -52,9 +56,15 @@ export default function WelcomeScreen() {
         </View>
       </Pressable>
 
-      <Text className="mt-[15px] text-center text-[13.8px] leading-[16px] text-[#333]">
-        Already have an account? <Text className="font-bold text-black">Sign In</Text>
-      </Text>
+      <Pressable
+        accessibilityRole="link"
+        hitSlop={10}
+        onPress={() => router.push({ pathname: '/sign-in', params: { mode: 'signin' } })}
+        className="mt-[15px] self-center active:opacity-60">
+        <Text className="text-center text-[13.8px] leading-[16px] text-[#333]">
+          Already have an account? <Text className="font-bold text-black">Sign In</Text>
+        </Text>
+      </Pressable>
     </View>
   );
 }

@@ -1,98 +1,79 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth, useUser } from '@clerk/expo';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import type { ReactNode } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { calculateBaselineTargets } from '@/shared/nutrition';
+import { toProfileInput, useOnboarding } from '@/stores/onboarding';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+const withCommas = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+function TargetRow({ icon, label, value, last }: { icon: ReactNode; label: string; value: string; last?: boolean }) {
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <View className={`h-14 flex-row items-center px-5 ${last ? '' : 'border-b border-[#F0F0F0]'}`}>
+      <View className="w-6 items-center">{icon}</View>
+      <Text className="ml-4 flex-1 text-base font-semibold text-[#111]">{label}</Text>
+      <Text className="text-base text-[#333]">{value}</Text>
+    </View>
   );
 }
 
+// Placeholder until the Home dashboard is built. Targets come from the local onboarding draft
+// until the profile and AI plan are saved server-side.
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const { signOut } = useAuth();
+  const { user } = useUser();
+  const draft = useOnboarding();
+  const profile = toProfileInput(draft);
+  const targets = profile ? calculateBaselineTargets(profile) : null;
+  const show = (value: number | undefined, unit: string) => (value === undefined ? '—' : `${withCommas(value)}${unit}`);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <View className="flex-1 bg-[#FDFDFD]" style={{ paddingTop: insets.top }}>
+      <ScrollView contentContainerClassName="px-6 pb-6 pt-4" showsVerticalScrollIndicator={false}>
+        <View className="flex-row items-start">
+          <View className="flex-1 pr-3">
+            <Text className="text-[32px] font-bold leading-10 tracking-tight text-[#111]">
+              You’re all set{user?.firstName ? `, ${user.firstName}` : ''}
+            </Text>
+            {user?.primaryEmailAddress ? (
+              <Text className="mt-1 text-base text-[#444]">{user.primaryEmailAddress.emailAddress}</Text>
+            ) : null}
+          </View>
+          {/* TODO: open Settings / Profile once that screen exists. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            hitSlop={8}
+            className="h-11 w-11 items-center justify-center rounded-full border border-[#F0F0F0] bg-white shadow-sm active:opacity-60">
+            <Ionicons name="settings-sharp" size={22} color="#9A9A9A" />
+          </Pressable>
+        </View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+        <View className="mt-8 rounded-2xl border border-[#EDEDED] bg-white">
+          <TargetRow
+            icon={<Ionicons name="flame" size={20} color="#111" />}
+            label="Calories"
+            value={`${show(targets?.calories, '')} / day`}
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+          <TargetRow icon={<Ionicons name="flash" size={19} color="#111" />} label="Protein" value={show(targets?.proteinG, ' g')} />
+          <TargetRow icon={<MaterialCommunityIcons name="leaf" size={20} color="#111" />} label="Carbs" value={show(targets?.carbsG, ' g')} />
+          <TargetRow icon={<Ionicons name="water" size={20} color="#111" />} label="Fat" value={show(targets?.fatG, ' g')} last />
+        </View>
+      </ScrollView>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      {/* Temporary until the Profile screen (with sign out) exists. */}
+      <View className="px-6 pt-2" style={{ paddingBottom: insets.bottom + 12 }}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => signOut()}
+          className="h-[54px] items-center justify-center rounded-2xl border border-[#E4E4E4] bg-white active:opacity-70">
+          <Text className="text-[17px] font-medium text-[#111]">Sign out</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});
