@@ -2,6 +2,7 @@ import '../../global.css';
 
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -15,8 +16,15 @@ if (!publishableKey) {
   throw new Error('Add EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY to .env.local');
 }
 
+const queryClient = new QueryClient();
+
 function RootNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
+
+  // Never show one account's cached data to the next one.
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) queryClient.clear();
+  }, [isLoaded, isSignedIn]);
 
   // Keep the native splash up while Clerk restores the session from the token cache,
   // so signed-in users never see the welcome screen flash.
@@ -45,9 +53,11 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <RootNavigator />
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <RootNavigator />
+        </ThemeProvider>
+      </QueryClientProvider>
     </ClerkProvider>
   );
 }

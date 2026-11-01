@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@clerk/backend": "^3.26.5",
     "@clerk/expo": "^4.14.5",
     "@expo/ui": "~58.0.25",
     "@expo/vector-icons": "^15.0.2",
+    "@neondatabase/serverless": "^1.2.0",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@tanstack/react-query": "^5.105.0",
     "@trigger.dev/sdk": "^4.8.3",
+    "drizzle-orm": "^0.45.4",
     "expo": "~58.0.21",
     "expo-auth-session": "~58.0.16",
     "expo-constants": "~58.0.14",
@@ -34,16 +38,19 @@
     "react-native-screens": "~4.30.0",
     "react-native-web": "~0.21.4",
     "react-native-worklets": "0.13.0",
+    "zod": "^4.6.7",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@trigger.dev/build": "^4.8.3",
     "@types/react": "~19.3.0",
     "babel-preset-expo": "~58.0.0",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.4",
     "prettier-plugin-tailwindcss": "^0.5.11",
     "tailwindcss": "^3.4.17",
+    "trigger.dev": "^4.8.3",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -51,7 +58,12 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:check": "drizzle-kit check",
+    "trigger:dev": "NODE_OPTIONS=--no-experimental-webstorage trigger dev"
   },
   "private": true
 }

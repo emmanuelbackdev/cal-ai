@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useMe } from '@/hooks/use-me';
 import { calculateBaselineTargets } from '@/shared/nutrition';
 import { toProfileInput, useOnboarding } from '@/stores/onboarding';
 
@@ -20,15 +21,17 @@ function TargetRow({ icon, label, value, last }: { icon: ReactNode; label: strin
   );
 }
 
-// Placeholder until the Home dashboard is built. Targets come from the local onboarding draft
-// until the profile and AI plan are saved server-side.
+// Placeholder until the Home dashboard is built.
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const { user } = useUser();
-  const draft = useOnboarding();
-  const profile = toProfileInput(draft);
-  const targets = profile ? calculateBaselineTargets(profile) : null;
+  const { data: me } = useMe();
+  const draftProfile = toProfileInput(useOnboarding());
+  // Active plan from the server; until plans are generated, the formula on the saved profile,
+  // or on the local draft while it's still being saved right after sign-in.
+  const savedOrDraft = me?.profile ?? draftProfile;
+  const targets = me?.plan ?? (savedOrDraft ? calculateBaselineTargets(savedOrDraft) : null);
   const show = (value: number | undefined, unit: string) => (value === undefined ? '—' : `${withCommas(value)}${unit}`);
 
   return (
