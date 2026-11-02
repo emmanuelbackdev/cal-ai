@@ -4,6 +4,8 @@ import { Redirect, router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useOnboardingGate } from '@/hooks/use-me';
+
 function ArrowRight() {
   return (
     <View className="h-3 w-[19px] justify-center">
@@ -17,8 +19,15 @@ function ArrowRight() {
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const { isSignedIn } = useAuth();
+  const { resolved, destination } = useOnboardingGate();
 
-  if (isSignedIn) return <Redirect href="/home" />
+  if (isSignedIn) {
+    // Blank (same background) for the moment it takes to load the profile.
+    if (!resolved) return <View className="flex-1 bg-[#FDFDFD]" />;
+    return (
+      <Redirect href={destination === 'onboarding' ? '/onboarding/sex' : destination === 'plan' ? '/plan-reveal' : '/home'} />
+    );
+  }
 
   return (
     <View
@@ -41,9 +50,6 @@ export default function WelcomeScreen() {
 
       <Text className="text-center text-[33px] font-semibold leading-[36px] text-black">
         Calorie tracking{'\n'}made easy
-      </Text>
-      <Text className="mt-[9px] text-center text-[14.6px] leading-[18.5px] text-[#333]">
-        Scan meals, track calories and build{'\n'}healthy habits with AI.
       </Text>
 
       <Pressable

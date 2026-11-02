@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { withUser } from '@/server/auth';
 import { db } from '@/server/db/client';
 import { profiles, users } from '@/server/db/schema';
+import { requestPlanGeneration } from '@/server/plans';
 import { onboardingSchema } from '@/shared/profile';
 
 const oneDecimal = (n: number) => Math.round(n * 10) / 10;
@@ -35,8 +36,7 @@ export const POST = withUser(async (request, user) => {
     await db.update(users).set({ timezone }).where(eq(users.id, user.id));
   }
 
-  // TODO(M1): trigger the `generate-plan` task here once it exists. Until then the app derives
-  // targets from the profile with the formula in src/shared/nutrition.ts.
+  if (inserted) await requestPlanGeneration(user.id);
 
   const profile = inserted ?? (await db.query.profiles.findFirst({ where: eq(profiles.userId, user.id) }));
   return Response.json({ profile, created: Boolean(inserted) }, { status: inserted ? 201 : 200 });

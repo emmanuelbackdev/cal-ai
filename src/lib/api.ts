@@ -29,6 +29,7 @@ export function useApiFetch() {
         },
       });
       if (!response.ok) throw new ApiError(response.status, await response.text());
+      if (response.status === 204) return undefined as T;
       return (await response.json()) as T;
     },
     [getToken]

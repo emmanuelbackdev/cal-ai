@@ -35,6 +35,12 @@ export async function upsertClerkUser({ clerkUserId, clerkUpdatedAt, ...profile 
 
 let clerk: ReturnType<typeof createClerkClient> | undefined;
 
+/** Clerk Backend API client (server-only; uses CLERK_SECRET_KEY). */
+export function clerkClient() {
+  clerk ??= createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+  return clerk;
+}
+
 /**
  * Returns the `users` row for a Clerk user, creating it from Clerk's Backend API if the
  * `user.created` webhook hasn't landed yet. The webhook stays the normal path; this is the fallback.
@@ -43,8 +49,7 @@ export async function ensureUser(clerkUserId: string): Promise<User> {
   const existing = await db.query.users.findFirst({ where: eq(users.clerkUserId, clerkUserId) });
   if (existing) return existing;
 
-  clerk ??= createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
-  const clerkUser = await clerk.users.getUser(clerkUserId);
+  const clerkUser = await clerkClient().users.getUser(clerkUserId);
   const primaryEmail = clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId);
 
   const row = await upsertClerkUser({

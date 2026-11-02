@@ -19,7 +19,7 @@ Greenfield project (`/Users/emmy/Desktop/cal-ai` is empty). Goal: an AI calorie-
 Onboarding → Sign-in (Clerk: Apple + Google) → AI plan reveal → Home dashboard → Scan (camera or photo library) → Meal detail/edit → Progress tab (weight logs + charts) → Profile (edit info, units, targets, delete account).
 
 ### Out of scope (v1)
-Paywall/subscriptions, barcode scan, text/voice logging, standalone manual entry, water/exercise tracking, Apple Health/Google Fit, push notifications, offline capture queue, social features, web app, non-English languages, streaks/gamification.
+Paywall/subscriptions, barcode scan, text/voice logging, standalone manual entry, water/exercise tracking, Apple Health/Google Fit, push notifications, offline capture queue, social features, web app, non-English languages, gamification beyond the logging streak.
 
 ### Locked tech stack
 | Concern | Choice |
@@ -43,22 +43,22 @@ Paywall/subscriptions, barcode scan, text/voice logging, standalone manual entry
 **A. New user (first launch)**
 1. Welcome → onboarding questions (one per screen, progress bar): sex, birth date, unit system, height, current weight, activity level, goal (lose/maintain/gain), target weight, desired pace. Answers saved to a **local persisted draft** (Zustand).
 2. "Save your plan" → Sign in with Apple / Google (Clerk).
-3. App calls `POST /api/onboarding` with the draft → creates profile → triggers `generate-plan` task → "Building your plan…" screen subscribed via Realtime.
-4. **Plan reveal ("aha")**: daily calories, protein/carbs/fat, short AI rationale, projected goal date. CTA → Home.
+3. App calls `POST /api/onboarding` with the draft → creates profile → triggers `generate-plan` task → "Building your plan…" screen (`/plan-reveal`, polls `GET /api/me` every 2 s until the plan exists; `/api/me` re-triggers the task, deduped for 10 min, for any onboarded user without a plan). No calorie numbers are shown before sign-in.
+4. **Plan reveal ("aha")**: daily calories, protein/carbs/fat, short AI rationale. CTA → Home. Signed-in users without a profile are always sent through onboarding first.
 
 **B. Returning user / new device:** Sign in → `GET /api/me` → profile exists → Home. If signing in with an account that already has a profile while holding a local draft → keep existing profile, discard draft (ASSUMPTION).
 
 **C. Scan a meal**
-1. Home "+" → full-screen camera (`expo-camera`) with library button (`expo-image-picker`).
+1. **Scan tab** (tab bar: Home | Scan | Profile) → camera (`expo-camera`, permission requested on first visit) with library button (`expo-image-picker`) → preview → "Analyze food".
 2. Image resized/compressed on device (`expo-image-manipulator`, ~1280px, JPEG 0.8).
 3. App gets upload auth from `POST /api/uploads/imagekit-auth`, uploads **directly to ImageKit** (`isPrivateFile: true`, folder `/{env}/users/{userId}/meals/`).
 4. `POST /api/meals` → quota check → insert `pending` meal → trigger `analyze-meal` (idempotencyKey = mealId, tag `user_{id}`).
-5. Navigate back to Home immediately; **"Analyzing…" card** (with local image) appears optimistically; fills in when the run completes.
+5. Switch to the Home tab immediately; **"Analyzing…" card** (with the photo) appears optimistically; fills in when the run completes.
 6. Tap card → Meal detail: photo, name, items (portion, kcal, P/C/F), totals. Edit item numbers/portions, delete item, add item, rename meal, delete meal. Totals recompute server-side.
 
-**D. Home dashboard:** Week strip (select day) → calories remaining ring → P/C/F progress bars → that day's meals (pending / complete / failed cards).
+**D. Home dashboard:** Week strip (select day) → calories remaining ring → P/C/F progress bars → that day's meals (pending / complete / failed cards). Header 🔥 streak badge (consecutive local days with ≥1 analyzed meal; a streak ending yesterday stays alive until today ends) → tap opens a motivational bottom sheet with the last 7 days.
 
-**E. Progress tab:** Log weight (one per day, upsert) → weight-over-time chart + daily calories (last 7/30 days) vs target. Logging weight does **not** change targets.
+**E. Progress (inside Profile, M4 — no longer a tab):** Log weight (one per day, upsert) → weight-over-time chart + daily calories (last 7/30 days) vs target. Logging weight does **not** change targets.
 
 **F. Profile:** Edit body stats/goal/activity, unit toggle, view/override targets manually, "Regenerate plan with AI", sign out, **delete account** (Apple requirement).
 
@@ -94,7 +94,7 @@ Sentry: app + API routes + Trigger tasks
 Single repo, single `package.json`:
 ```
 src/app/             Expo Router screens + src/app/api/**/+api.ts
-  (onboarding)/ (auth)/ (tabs)/{index,progress,profile} scan.tsx meal/[id].tsx plan-building.tsx plan-reveal.tsx
+  onboarding/ sign-in.tsx plan-reveal.tsx (tabs)/{home,scan,profile} meal/[id].tsx
 src/components, src/hooks, src/constants, src/stores, src/lib (api client, units, imagekit)
 src/server/          shared server code: auth.ts, db/{schema,client}.ts, imagekit.ts, quota.ts
 src/trigger/         analyze-meal.ts, generate-plan.ts, ai/{schemas,prompts}.ts  (matches trigger.config.ts dirs)
@@ -118,13 +118,14 @@ Business logic lives server-side (API routes + tasks). Client only formats, vali
 | `GET/PATCH/DELETE /api/meals/:id` | Detail; edit name/items (server recomputes totals, sets `user_edited`); delete (cancels run if pending, deletes ImageKit file) |
 | `POST /api/meals/:id/retry` | Re-trigger failed analysis (counts against quota) |
 | `GET /api/progress?range=` · `POST /api/weights` | Daily totals + weights · upsert weight |
+| `GET /api/streak?today=` | Current streak, whether today is logged, logged days in the last 7 (computed from `meals`, no extra table) |
 | `DELETE /api/account` | Delete DB rows (cascade), ImageKit user folder, Clerk user |
 
 ### Background jobs (Trigger.dev v4)
 
 **`analyze-meal`** (payload `{ mealId }`, idempotencyKey = mealId, tags `user_{id}`, `meal_{id}`, retry maxAttempts 3 w/ backoff, maxDuration ~60s)
 1. Load meal; if `complete` → no-op (idempotent). Set `analyzing`.
-2. Fetch image via signed ImageKit URL with transformation (`w-1024,q-80,f-jpg`), base64-encode.
+2. Fetch image via signed ImageKit URL with transformation (`w-1024,h-1024,c-at_max,q-80,f-jpg`: fit within 1024×1024, never upscale), base64-encode.
 3. `client.messages.parse({ model: MEAL_MODEL, output_config: { format: zodOutputFormat(MealAnalysis), effort: "low" }, ... })` with image + system prompt. Schema: `{ is_food, meal_name, items[{name, portion_description, estimated_grams, calories, protein_g, carbs_g, fat_g}], confidence }`.
 4. Check `stop_reason` (`refusal` → `failed/refused`; Haiku 5.5 has no server-side fallback). `is_food=false` → `failed/not_food`.
 5. Sanitize (non-negative, clamp absurd values), compute totals; in one transaction delete existing items → insert items → update meal `complete` + token usage.
@@ -168,7 +169,7 @@ Business logic lives server-side (API routes + tasks). Client only formats, vali
 14. Users must be 13+ (age validation); app shows "estimates, not medical advice" disclaimer.
 
 ## 3. Open Risks / Unknowns
-1. **Trigger.dev Realtime on React Native is unverified** — docs are web-oriented; transport relies on streaming fetch. Spike in M1 (try `expo/fetch`); fallback = polling (already designed).
+1. ~~Trigger.dev Realtime on React Native is unverified~~ **Resolved (M2):** `@trigger.dev/react-hooks` can't be bundled for iOS/Android (its `@trigger.dev/core` dependency imports Node-only modules, e.g. `jose`'s Node build → `node:buffer`). Native apps poll `GET /api/meals` every 3 s while a meal is analyzing; web uses Realtime via `src/hooks/use-meal-run-updates.web.ts`.
 2. **EAS Hosting runtime** is a Workers-like environment: `@clerk/backend`, ImageKit signing (Node `crypto`), Neon WebSocket transactions, and Sentry SDK may need web-standard alternatives (Web Crypto HMAC, Neon HTTP driver + batch). Spike in M0.
 3. **Haiku accuracy** on mixed plates/portions and plan quality — cheapest model; mitigated by editable items, guardrails, and env-swappable model.
 4. **Safety-classifier refusals** on Haiku 5.5 have no server-side fallback → surfaced as failed card with retry.

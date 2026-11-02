@@ -20,11 +20,14 @@ async function clerkUserIdFrom(request: Request): Promise<string | null> {
  * Wraps an API route handler so it only runs for a signed-in user, and receives that user's `users` row.
  * Every query in the handler must filter by `user.id` — never trust ids sent by the client.
  */
-export function withUser(handler: (request: Request, user: User) => Promise<Response>) {
-  return async (request: Request) => {
+export function withUser(
+  handler: (request: Request, user: User, params: Record<string, string>) => Promise<Response>
+) {
+  // `params` are the dynamic route segments, e.g. `{ id }` for `meals/[id]+api.ts`.
+  return async (request: Request, params: Record<string, string> = {}) => {
     const clerkUserId = await clerkUserIdFrom(request);
     if (!clerkUserId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     const user = await ensureUser(clerkUserId);
-    return handler(request, user);
+    return handler(request, user, params);
   };
 }

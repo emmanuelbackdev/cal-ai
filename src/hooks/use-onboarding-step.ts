@@ -10,6 +10,6 @@ export function useOnboardingStep(step: OnboardingStep) {
 
   return {
     progress: STEP_PHASE[step] / 4,
-    next: () => router.push((following ? `/onboarding/${following}` : '/onboarding/result') as Href),
+    next: () => router.push((following ? `/onboarding/${following}` : '/onboarding/plan') as Href),
   };
 }
