@@ -45,3 +45,6 @@ example
 # trigger.dev
 .trigger
 .env
+.vercel
+.env*
+!.env.example
