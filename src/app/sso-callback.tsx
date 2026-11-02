@@ -8,7 +8,7 @@ import { ActivityIndicator, View } from 'react-native';
  */
 export default function SSOCallback() {
   const { isSignedIn } = useAuth();
-  if (isSignedIn) return <Redirect href="/home" />;
+  if (isSignedIn) return <Redirect href="/" />;
   return (
     <View className="flex-1 items-center justify-center bg-[#FDFDFD]">
       <ActivityIndicator color="#111" />

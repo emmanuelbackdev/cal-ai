@@ -94,6 +94,8 @@ export function OnboardingScreen({
             accessibilityRole="button"
             accessibilityLabel="Back"
             hitSlop={12}
+            // Signed-in users are redirected straight into the first step, so there may be nothing to go back to.
+            disabled={!router.canGoBack()}
             onPress={() => router.back()}
             className="absolute left-6 active:opacity-60">
             <Ionicons name="arrow-back" size={24} color="#111" />

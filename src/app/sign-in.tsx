@@ -84,7 +84,8 @@ export default function SignInScreen() {
       // No session means the user closed the browser sheet — not an error.
       if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
-        router.replace('/home');
+        // "/" decides between onboarding (no profile yet) and home.
+        router.replace('/');
       }
     } catch (err) {
       console.error('SSO sign-in failed', JSON.stringify(err, null, 2));

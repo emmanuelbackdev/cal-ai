@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -16,10 +17,18 @@ export type OnboardingDraft = {
   goal: Goal | null;
   targetWeightKg: number | null;
   pace: Pace;
+  /** Set when the user taps Continue on the last onboarding screen; only then is the draft submitted. */
+  finished: boolean;
 };
 
 type OnboardingStore = OnboardingDraft & {
+  /**
+   * True from the moment the draft is saved as a profile until the user has seen their plan
+   * (plan-reveal screen). Not part of the draft, so `reset()` leaves it alone.
+   */
+  revealPending: boolean;
   set: (patch: Partial<OnboardingDraft>) => void;
+  setRevealPending: (revealPending: boolean) => void;
   reset: () => void;
 };
 
@@ -33,6 +42,7 @@ const initialDraft: OnboardingDraft = {
   goal: null,
   targetWeightKg: null,
   pace: 'recommended',
+  finished: false,
 };
 
 /** Onboarding answers, persisted locally until the user signs in and the profile is created. */
@@ -40,7 +50,9 @@ export const useOnboarding = create<OnboardingStore>()(
   persist(
     (set) => ({
       ...initialDraft,
+      revealPending: false,
       set: (patch) => set(patch),
+      setRevealPending: (revealPending) => set({ revealPending }),
       reset: () => set(initialDraft),
     }),
     {
@@ -49,6 +61,15 @@ export const useOnboarding = create<OnboardingStore>()(
     }
   )
 );
+
+/** False until the persisted draft has been read back from storage on launch. */
+export function useOnboardingHydrated() {
+  return useSyncExternalStore(
+    useOnboarding.persist.onFinishHydration,
+    useOnboarding.persist.hasHydrated,
+    () => false // server render (web): storage isn't available there
+  );
+}
 
 export const ONBOARDING_STEPS = [
   'sex',

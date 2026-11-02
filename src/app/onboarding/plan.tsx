@@ -1,3 +1,4 @@
+import { useAuth } from '@clerk/expo';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Redirect, router } from 'expo-router';
 import { Text, View } from 'react-native';
@@ -24,6 +25,7 @@ function formatGoalDate(date: Date) {
 
 export default function PlanStep() {
   const draft = useOnboarding();
+  const { isSignedIn } = useAuth();
   const profile = toProfileInput(draft);
   if (!profile) return <Redirect href="/onboarding/sex" />;
 
@@ -41,7 +43,12 @@ export default function PlanStep() {
       title={"Here’s what your\nplan includes"}
       subtitle={subtitle}
       buttonLabel="Continue"
-      onNext={() => router.push('/sign-in')}>
+      onNext={() => {
+        // Signed-in users (no profile yet) are done here: the root layout submits the draft and
+        // swaps onboarding for the app. Everyone else creates an account first.
+        draft.set({ finished: true });
+        if (!isSignedIn) router.push('/sign-in');
+      }}>
       <View className="mt-6 gap-2.5">
         {FEATURES.map((f) => (
           <View

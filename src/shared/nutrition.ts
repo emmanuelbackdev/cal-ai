@@ -36,7 +36,7 @@ export const PACE_RATES_KG: Record<Exclude<Goal, 'maintain'>, Record<Pace, numbe
 };
 
 const KCAL_PER_KG = 7700;
-const MIN_CALORIES: Record<Sex, number> = { female: 1200, male: 1500 };
+export const MIN_CALORIES: Record<Sex, number> = { female: 1200, male: 1500 };
 
 export function ageFromBirthDate(birthDate: string, today = new Date()) {
   const [y, m, d] = birthDate.split('-').map(Number);
